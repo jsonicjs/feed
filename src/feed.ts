@@ -252,12 +252,6 @@ function isElement(node: unknown): node is XmlElement {
   )
 }
 
-function elementChildren(el: XmlElement): XmlElement[] {
-  const out: XmlElement[] = []
-  for (const c of el.children) if (isElement(c)) out.push(c)
-  return out
-}
-
 function findChild(
   el: XmlElement | undefined,
   localName: string,
@@ -915,18 +909,6 @@ function convert(root: XmlElement, opts: Required<FeedOptions>): FeedResult {
   return rss1ToAtom(native)
 }
 
-
-// --- Public functional entry point ----------------------------------------
-
-function parseFeed(src: string, options?: FeedOptions): FeedResult {
-  const j = Jsonic.make().use(Xml)
-  const root = j(src)
-  if (!isElement(root)) {
-    throw new Error('feed: input did not parse to an XML element')
-  }
-  return convert(root, withDefaults(options))
-}
-
 function withDefaults(o?: FeedOptions): Required<FeedOptions> {
   return { format: o?.format ?? 'atom' }
 }
@@ -938,18 +920,21 @@ const Feed: Plugin = function Feed(jsonic, options) {
   jsonic.use(Xml)
   const opts = withDefaults(options as FeedOptions | undefined)
 
-  // Attach a `feed(src)` method that runs xml parse + feed convert.
-  ;(jsonic as any).feed = function (src: string): FeedResult {
-    const root = jsonic(src)
-    if (!isElement(root)) {
-      throw new Error('feed: input did not parse to an XML element')
-    }
-    return convert(root, opts)
-  }
+  // After @xml-bc copies the parsed XmlElement tree onto ctx.root().node,
+  // transform it into the feed shape selected by `opts.format`. Appending
+  // a second bc action runs it after the XML plugin's own.
+  jsonic.rule('xml', (rs) => {
+    rs.bc(true, (_rule, ctx) => {
+      const root = ctx.root()
+      if (isElement(root.node)) {
+        root.node = convert(root.node, opts)
+      }
+    })
+  })
 }
 
 
-export { Feed, parseFeed, detect }
+export { Feed, detect }
 
 export type {
   FeedFormat,

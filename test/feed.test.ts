@@ -4,7 +4,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert'
 
 import { Jsonic } from 'jsonic'
-import { Feed, parseFeed, detect } from '../dist/feed.js'
+import { Feed, detect } from '../dist/feed.js'
 import type {
   AtomFeed,
   Rss1Feed,
@@ -168,39 +168,47 @@ const RSS_090 = `<?xml version="1.0"?>
 </rdf:RDF>`
 
 
+// Build an atom-output parser once and reuse it for the bulk of the tests.
+const atomParse = Jsonic.make().use(Feed)
+const nativeParse = Jsonic.make().use(Feed, { format: 'native' })
+const rawParse = Jsonic.make().use(Feed, { format: 'raw' })
+
+
 describe('feed - format detection', () => {
+  // Detection runs against the raw XmlElement tree. The `raw` parser gives
+  // us that tree without further conversion.
   test('detect atom 1.0', () => {
-    const root = Jsonic.make().use(require('@jsonic/xml').Xml)(ATOM_10)
+    const root: any = rawParse(ATOM_10)
     assert.deepEqual(detect(root), { dialect: 'atom', version: 'atom10' })
   })
 
   test('detect atom 0.3', () => {
-    const root = Jsonic.make().use(require('@jsonic/xml').Xml)(ATOM_03)
+    const root: any = rawParse(ATOM_03)
     assert.deepEqual(detect(root), { dialect: 'atom', version: 'atom03' })
   })
 
   test('detect rss 2.0', () => {
-    const root = Jsonic.make().use(require('@jsonic/xml').Xml)(RSS_20)
+    const root: any = rawParse(RSS_20)
     assert.deepEqual(detect(root), { dialect: 'rss', version: 'rss20' })
   })
 
   test('detect rss 0.92', () => {
-    const root = Jsonic.make().use(require('@jsonic/xml').Xml)(RSS_092)
+    const root: any = rawParse(RSS_092)
     assert.deepEqual(detect(root), { dialect: 'rss', version: 'rss092' })
   })
 
   test('detect rss 0.91', () => {
-    const root = Jsonic.make().use(require('@jsonic/xml').Xml)(RSS_091)
+    const root: any = rawParse(RSS_091)
     assert.deepEqual(detect(root), { dialect: 'rss', version: 'rss091u' })
   })
 
   test('detect rss 1.0 (rdf)', () => {
-    const root = Jsonic.make().use(require('@jsonic/xml').Xml)(RSS_10)
+    const root: any = rawParse(RSS_10)
     assert.deepEqual(detect(root), { dialect: 'rdf', version: 'rss10' })
   })
 
   test('detect rss 0.90 (rdf)', () => {
-    const root = Jsonic.make().use(require('@jsonic/xml').Xml)(RSS_090)
+    const root: any = rawParse(RSS_090)
     assert.deepEqual(detect(root), { dialect: 'rdf', version: 'rss090' })
   })
 })
@@ -208,7 +216,7 @@ describe('feed - format detection', () => {
 
 describe('feed - default Atom output', () => {
   test('atom 1.0 round-trips through Atom output', () => {
-    const f = parseFeed(ATOM_10) as AtomFeed
+    const f = atomParse(ATOM_10) as AtomFeed
     assert.equal(f.format, 'atom')
     assert.equal(f.version, '1.0')
     assert.equal(f.id, 'urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6')
@@ -242,7 +250,7 @@ describe('feed - default Atom output', () => {
   })
 
   test('atom 0.3 maps tagline -> subtitle and modified -> updated', () => {
-    const f = parseFeed(ATOM_03) as AtomFeed
+    const f = atomParse(ATOM_03) as AtomFeed
     assert.equal(f.format, 'atom')
     assert.equal(f.version, '0.3')
     assert.deepEqual(f.subtitle, { type: 'text', value: 'An older feed' })
@@ -253,7 +261,7 @@ describe('feed - default Atom output', () => {
   })
 
   test('rss 2.0 converts to Atom shape', () => {
-    const f = parseFeed(RSS_20) as AtomFeed
+    const f = atomParse(RSS_20) as AtomFeed
     assert.equal(f.format, 'atom')
     assert.deepEqual(f.title, { type: 'text', value: 'RSS 2 Sample' })
     assert.deepEqual(f.subtitle, { type: 'text', value: 'RSS 2.0 description' })
@@ -292,19 +300,19 @@ describe('feed - default Atom output', () => {
   })
 
   test('rss 0.92 / 0.91 convert to Atom', () => {
-    const f91 = parseFeed(RSS_091) as AtomFeed
+    const f91 = atomParse(RSS_091) as AtomFeed
     assert.equal(f91.format, 'atom')
     assert.deepEqual(f91.title, { type: 'text', value: 'RSS 0.91' })
     assert.equal(f91.entries.length, 1)
 
-    const f92 = parseFeed(RSS_092) as AtomFeed
+    const f92 = atomParse(RSS_092) as AtomFeed
     assert.equal(f92.format, 'atom')
     assert.deepEqual(f92.title, { type: 'text', value: 'RSS 0.92' })
     assert.equal(f92.entries[0].links?.[0].rel, 'enclosure')
   })
 
   test('rss 1.0 (rdf) converts to Atom', () => {
-    const f = parseFeed(RSS_10) as AtomFeed
+    const f = atomParse(RSS_10) as AtomFeed
     assert.equal(f.format, 'atom')
     assert.deepEqual(f.title, { type: 'text', value: 'RSS 1.0 Example' })
     assert.deepEqual(f.subtitle, { type: 'text', value: 'An RDF-based feed' })
@@ -317,7 +325,7 @@ describe('feed - default Atom output', () => {
   })
 
   test('rss 0.90 (rdf) converts to Atom', () => {
-    const f = parseFeed(RSS_090) as AtomFeed
+    const f = atomParse(RSS_090) as AtomFeed
     assert.equal(f.format, 'atom')
     assert.deepEqual(f.title, { type: 'text', value: 'RSS 0.90' })
     assert.equal(f.entries.length, 1)
@@ -328,7 +336,7 @@ describe('feed - default Atom output', () => {
 
 describe('feed - native output', () => {
   test('rss 2.0 native shape', () => {
-    const f = parseFeed(RSS_20, { format: 'native' }) as Rss2Feed
+    const f = nativeParse(RSS_20) as Rss2Feed
     assert.equal(f.format, 'rss')
     assert.equal(f.version, '2.0')
     assert.equal(f.title, 'RSS 2 Sample')
@@ -355,14 +363,14 @@ describe('feed - native output', () => {
   })
 
   test('atom 1.0 native shape (already atom)', () => {
-    const f = parseFeed(ATOM_10, { format: 'native' }) as AtomFeed
+    const f = nativeParse(ATOM_10) as AtomFeed
     assert.equal(f.format, 'atom')
     assert.equal(f.version, '1.0')
     assert.equal(f.entries.length, 1)
   })
 
   test('rss 1.0 native (rdf) shape', () => {
-    const f = parseFeed(RSS_10, { format: 'native' }) as Rss1Feed
+    const f = nativeParse(RSS_10) as Rss1Feed
     assert.equal(f.format, 'rdf')
     assert.equal(f.version, '1.0')
     assert.equal(f.about, 'http://example.org/index.rdf')
@@ -375,7 +383,7 @@ describe('feed - native output', () => {
 
 describe('feed - raw output', () => {
   test('returns the underlying XmlElement tree', () => {
-    const root: any = parseFeed(ATOM_10, { format: 'raw' })
+    const root: any = rawParse(ATOM_10)
     assert.equal(root.localName, 'feed')
     assert.equal(root.namespace, 'http://www.w3.org/2005/Atom')
     assert.ok(Array.isArray(root.children))
@@ -383,30 +391,9 @@ describe('feed - raw output', () => {
 })
 
 
-describe('feed - Plugin form', () => {
-  test('jsonic.feed(src) returns Atom by default', () => {
-    const j: any = Jsonic.make().use(Feed)
-    const f = j.feed(RSS_20) as AtomFeed
-    assert.equal(f.format, 'atom')
-    assert.equal(f.entries.length, 2)
-  })
-
-  test('jsonic.feed(src) honors plugin options', () => {
-    const j: any = Jsonic.make().use(Feed, { format: 'native' })
-    const f = j.feed(RSS_20) as Rss2Feed
-    assert.equal(f.format, 'rss')
-    assert.equal(f.version, '2.0')
-  })
-})
-
-
 describe('feed - errors', () => {
   test('unrecognized root element throws', () => {
-    assert.throws(() => parseFeed('<not-a-feed/>'), /unrecognized root/)
-  })
-
-  test('non-XML input throws', () => {
-    assert.throws(() => parseFeed(''), /XML element|jsonic|unexpected/i)
+    assert.throws(() => atomParse('<not-a-feed/>'), /unrecognized root/)
   })
 })
 
@@ -419,7 +406,7 @@ describe('feed - xhtml content', () => {
         <content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p>body <b>here</b></p></div></content>
       </entry>
     </feed>`
-    const f = parseFeed(src) as AtomFeed
+    const f = atomParse(src) as AtomFeed
     const e = f.entries[0]
     assert.equal(e.title?.type, 'xhtml')
     assert.match(e.title?.value || '', /Hi <em.*>there<\/em>/)

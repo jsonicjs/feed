@@ -33,13 +33,16 @@ Install:
 npm install @jsonic/feed jsonic @jsonic/xml
 ```
 
-Parse a feed in any supported dialect — the result is an Atom-shaped
-object regardless of input format:
+Register the plugin and call the Jsonic instance as usual — the result
+is an Atom-shaped object regardless of the input dialect:
 
 ```typescript
-import { parseFeed } from '@jsonic/feed'
+import { Jsonic } from 'jsonic'
+import { Feed } from '@jsonic/feed'
 
-const atom = parseFeed(`
+const j = Jsonic.make().use(Feed)
+
+const atom = j(`
   <rss version="2.0">
     <channel>
       <title>My Blog</title>
@@ -61,26 +64,18 @@ const atom = parseFeed(`
 // atom.entries[0].links[0] === { href: 'https://example.com/1', rel: 'alternate' }
 ```
 
-Or wire it into a Jsonic instance via the plugin form, which adds a
-`feed(src)` method:
-
-```typescript
-import { Jsonic } from 'jsonic'
-import { Feed } from '@jsonic/feed'
-
-const j = Jsonic.make().use(Feed)
-const atom = j.feed(rssSource)
-```
-
 
 ## How-to guides
 
 ### Keep the source dialect's structure (no Atom conversion)
 
 ```typescript
-import { parseFeed, type Rss2Feed } from '@jsonic/feed'
+import { Jsonic } from 'jsonic'
+import { Feed, type Rss2Feed } from '@jsonic/feed'
 
-const native = parseFeed(rssSource, { format: 'native' }) as Rss2Feed
+const j = Jsonic.make().use(Feed, { format: 'native' })
+
+const native = j(rssSource) as Rss2Feed
 // native.format  === 'rss'
 // native.version === '2.0'
 // native.items[0].guid?.value === 'item-1-guid'
@@ -97,9 +92,12 @@ The native return type is a discriminated union on `format`:
 ### Get the raw XML tree
 
 ```typescript
-import { parseFeed } from '@jsonic/feed'
+import { Jsonic } from 'jsonic'
+import { Feed } from '@jsonic/feed'
 
-const tree = parseFeed(rssSource, { format: 'raw' })
+const j = Jsonic.make().use(Feed, { format: 'raw' })
+
+const tree = j(rssSource)
 // tree.localName  === 'rss'
 // tree.children   === [...]
 ```
@@ -111,33 +109,21 @@ processing, useful when you want to handle non-standard extensions.
 
 ```typescript
 import { Jsonic } from 'jsonic'
-import { Xml } from '@jsonic/xml'
-import { detect } from '@jsonic/feed'
+import { Feed, detect } from '@jsonic/feed'
 
-const root = Jsonic.make().use(Xml)(rssSource)
+const j = Jsonic.make().use(Feed, { format: 'raw' })
+const root = j(rssSource)
 const { dialect, version } = detect(root)
 // e.g. { dialect: 'rss', version: 'rss20' }
-```
-
-### Configure the plugin form
-
-The plugin's options are set once at `use()` time:
-
-```typescript
-import { Jsonic } from 'jsonic'
-import { Feed } from '@jsonic/feed'
-
-const j = Jsonic.make().use(Feed, { format: 'native' })
-const native = j.feed(rssSource)
 ```
 
 
 ## Reference
 
 ```typescript
-function parseFeed(src: string, options?: FeedOptions): FeedResult
-function detect(root: XmlElement): { dialect: FeedDialect; version: FeedVersion }
 const Feed: Plugin
+
+function detect(root: XmlElement): { dialect: FeedDialect; version: FeedVersion }
 
 type FeedOptions = {
   format?: 'atom' | 'native' | 'raw'  // default: 'atom'
@@ -153,6 +139,15 @@ type FeedVersion =
   | 'rss10' | 'rss090'
   | 'unknown'
 ```
+
+Use the plugin via `Jsonic.make().use(Feed, options?)`. After
+registration, invoke the jsonic instance as a function on a feed XML
+source string; it returns the converted feed (or the raw `XmlElement`
+tree, when `options.format === 'raw'`).
+
+| Option   | Type                          | Default  | Effect                                                |
+|----------|-------------------------------|----------|-------------------------------------------------------|
+| `format` | `'atom' \| 'native' \| 'raw'` | `'atom'` | Output shape: normalised Atom, dialect-native, or raw XML tree |
 
 Atom shape (the default output) follows RFC 4287 closely:
 
