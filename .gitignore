@@ -31,3 +31,6 @@ dist-test
 
 package-lock.json
 yarn.lock
+
+# Go
+go/vendor/

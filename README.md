@@ -1,12 +1,19 @@
 # @jsonic/feed
 
-This plugin allows the [Jsonic](https://jsonic.senecajs.org) JSON parser
-(via [`@jsonic/xml`](https://github.com/jsonicjs/xml)) to parse
+A [Jsonic](https://jsonic.senecajs.org) plugin (built on
+[`@jsonic/xml`](https://github.com/jsonicjs/xml)) that parses
 syndication feeds — **RSS 0.90, 0.91, 0.92, 1.0, 2.0** and **Atom 0.3,
 1.0** — into a typed structure. By default every dialect is normalised
 to an Atom-shaped result; pass `format: 'native'` to keep the source
 dialect's structure, or `format: 'raw'` to get back the underlying
-`XmlElement` tree from `@jsonic/xml`.
+XML element tree from `@jsonic/xml`.
+
+The same parser is available in two languages:
+
+| Language   | Package                                                        | Source                              |
+| ---------- | -------------------------------------------------------------- | ----------------------------------- |
+| TypeScript | [`@jsonic/feed`](https://npmjs.com/package/@jsonic/feed)       | [`src/feed.ts`](src/feed.ts)        |
+| Go         | [`github.com/jsonicjs/feed/go`](https://github.com/jsonicjs/feed/tree/main/go) | [`go/feed.go`](go/feed.go) |
 
 [![npm version](https://img.shields.io/npm/v/@jsonic/feed.svg)](https://npmjs.com/package/@jsonic/feed)
 [![build](https://github.com/jsonicjs/feed/actions/workflows/build.yml/badge.svg)](https://github.com/jsonicjs/feed/actions/workflows/build.yml)
@@ -16,7 +23,7 @@ dialect's structure, or `format: 'raw'` to get back the underlying
 | ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
 
 
-The documentation below is organized along the
+The documentation below is organised along the
 [Diátaxis](https://diataxis.fr) quadrants:
 
 - [Quick start](#quick-start) — tutorial
@@ -27,14 +34,11 @@ The documentation below is organized along the
 
 ## Quick start
 
-Install:
+### TypeScript
 
 ```bash
 npm install @jsonic/feed jsonic @jsonic/xml
 ```
-
-Register the plugin and call the Jsonic instance as usual — the result
-is an Atom-shaped object regardless of the input dialect:
 
 ```typescript
 import { Jsonic } from 'jsonic'
@@ -61,7 +65,40 @@ const atom = j(`
 // atom.format         === 'atom'
 // atom.title.value    === 'My Blog'
 // atom.entries[0].id  === 'https://example.com/1'
-// atom.entries[0].links[0] === { href: 'https://example.com/1', rel: 'alternate' }
+```
+
+### Go
+
+```bash
+go get github.com/jsonicjs/feed/go
+```
+
+```go
+package main
+
+import (
+    "fmt"
+    jsonic "github.com/jsonicjs/jsonic/go"
+    feed "github.com/jsonicjs/feed/go"
+)
+
+func main() {
+    j := jsonic.Make()
+    if err := j.UseDefaults(feed.Feed, feed.Defaults); err != nil {
+        panic(err)
+    }
+    got, err := j.Parse(`<rss version="2.0">
+        <channel>
+          <title>My Blog</title>
+          <item><title>Hello</title><guid>1</guid></item>
+        </channel>
+      </rss>`)
+    if err != nil {
+        panic(err)
+    }
+    f := got.(feed.AtomFeed)
+    fmt.Println(f.Title.Value, "/", f.Entries[0].ID)
+}
 ```
 
 
@@ -69,16 +106,25 @@ const atom = j(`
 
 ### Keep the source dialect's structure (no Atom conversion)
 
+TypeScript:
+
 ```typescript
 import { Jsonic } from 'jsonic'
 import { Feed, type Rss2Feed } from '@jsonic/feed'
 
 const j = Jsonic.make().use(Feed, { format: 'native' })
-
 const native = j(rssSource) as Rss2Feed
-// native.format  === 'rss'
-// native.version === '2.0'
-// native.items[0].guid?.value === 'item-1-guid'
+// native.format === 'rss', native.version === '2.0'
+```
+
+Go:
+
+```go
+j := jsonic.Make()
+j.UseDefaults(feed.Feed, feed.Defaults, map[string]any{"format": "native"})
+got, _ := j.Parse(rssSource)
+native := got.(feed.Rss2Feed)
+// native.Format == "rss", native.Version == "2.0"
 ```
 
 The native return type is a discriminated union on `format`:
@@ -91,34 +137,52 @@ The native return type is a discriminated union on `format`:
 
 ### Get the raw XML tree
 
+TypeScript:
+
 ```typescript
-import { Jsonic } from 'jsonic'
-import { Feed } from '@jsonic/feed'
-
 const j = Jsonic.make().use(Feed, { format: 'raw' })
-
 const tree = j(rssSource)
-// tree.localName  === 'rss'
-// tree.children   === [...]
+// tree.localName === 'rss', tree.children === [...]
 ```
 
-This is the `XmlElement` produced by `@jsonic/xml` with no further
+Go:
+
+```go
+j := jsonic.Make()
+j.UseDefaults(feed.Feed, feed.Defaults, map[string]any{"format": "raw"})
+got, _ := j.Parse(rssSource)
+tree := got.(map[string]any)
+// tree["localName"] == "rss", tree["children"].([]any) == [...]
+```
+
+This is the element tree produced by `@jsonic/xml` with no further
 processing, useful when you want to handle non-standard extensions.
 
 ### Detect a dialect without converting
 
-```typescript
-import { Jsonic } from 'jsonic'
-import { Feed, detect } from '@jsonic/feed'
+TypeScript:
 
+```typescript
+import { Feed, detect } from '@jsonic/feed'
 const j = Jsonic.make().use(Feed, { format: 'raw' })
-const root = j(rssSource)
-const { dialect, version } = detect(root)
+const { dialect, version } = detect(j(rssSource))
 // e.g. { dialect: 'rss', version: 'rss20' }
+```
+
+Go:
+
+```go
+j := jsonic.Make()
+j.UseDefaults(feed.Feed, feed.Defaults, map[string]any{"format": "raw"})
+got, _ := j.Parse(rssSource)
+det := feed.Detect(got)
+// e.g. feed.Detection{Dialect: "rss", Version: "rss20"}
 ```
 
 
 ## Reference
+
+### TypeScript
 
 ```typescript
 const Feed: Plugin
@@ -148,6 +212,29 @@ tree, when `options.format === 'raw'`).
 | Option   | Type                          | Default  | Effect                                                |
 |----------|-------------------------------|----------|-------------------------------------------------------|
 | `format` | `'atom' \| 'native' \| 'raw'` | `'atom'` | Output shape: normalised Atom, dialect-native, or raw XML tree |
+
+### Go
+
+```go
+func Feed(j *jsonic.Jsonic, opts map[string]any) error
+func Detect(root any) Detection
+
+var Defaults = map[string]any{ "format": "atom" }
+
+type Detection struct {
+    Dialect string `json:"dialect"`
+    Version string `json:"version"`
+}
+```
+
+Register with `j.UseDefaults(feed.Feed, feed.Defaults, opts)` where
+`opts` is a `map[string]any` overriding the defaults. `Parse` then
+returns `(any, error)`; type-assert the result to `feed.AtomFeed`,
+`feed.Rss2Feed`, or `feed.Rss1Feed` based on the `format` option.
+
+| Key      | Type     | Default  | Effect                                                |
+|----------|----------|----------|-------------------------------------------------------|
+| `format` | `string` | `"atom"` | Output shape: `"atom"`, `"native"`, or `"raw"`        |
 
 Atom shape (the default output) follows RFC 4287 closely:
 
@@ -194,9 +281,9 @@ type AtomGenerator = { uri?: string; version?: string; value: string }
 type AtomContent   = { type: string; src?: string; value?: string }
 ```
 
-The native RSS 2/0.91/0.92 and RSS 1.0/0.90 shapes (`Rss2Feed`,
-`Rss2Item`, `Rss1Feed`, `Rss1Item` …) are also exported; see
-`src/feed.ts` for the full set.
+The Go structs (`AtomFeed`, `AtomEntry`, `Rss2Feed`, `Rss2Item`,
+`Rss1Feed`, `Rss1Item`, …) carry equivalent JSON tags so they marshal
+to the same shape. See [`go/feed.go`](go/feed.go) for the full set.
 
 
 ## Format mapping
@@ -240,6 +327,22 @@ For RDF (RSS 1.0/0.90):
 For Atom 0.3 → Atom 1.0 the legacy element names are renamed:
 `tagline → subtitle`, `modified → updated`, `issued → published`,
 `copyright → rights`.
+
+
+## Tests
+
+The TypeScript and Go test suites share fixtures from
+[`test/specs/`](test/specs/) — each base name has a `.xml` input and one
+or more expected JSON outputs (`.atom.json`, `.native.json`,
+`.detect.json`). Both languages enumerate the directory and JSON-compare
+the parser result to the expected output, so adding a new fixture is
+covered by both immediately.
+
+Both suites also run against a focused subset of well-formed feeds
+vendored from [`kurtmckee/feedparser`](https://github.com/kurtmckee/feedparser)
+under BSD 2-Clause (see
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)) at
+[`test/feedparser-wellformed/`](test/feedparser-wellformed/).
 
 
 ## Acknowledgments
