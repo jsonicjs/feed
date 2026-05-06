@@ -1,0 +1,34 @@
+# JSONC Grammar Definition
+# Parsed by a standard Jsonic instance and passed to jsonic.grammar()
+# Extends standard JSON grammar with end-of-input value handling.
+
+{
+  options: text: { lex: false }
+  options: number: { hex: false oct: false bin: false sep: null exclude: "@/^\\./" }
+  options: string: { chars: '"' multiChars: '' allowUnknown: false }
+  options: string: escape: { v: null }
+  options: map: { extend: false }
+  options: lex: { empty: false }
+  options: rule: { finish: false }
+
+  rule: val: open: {
+    alts: [
+      { s: '#ZZ' g: jsonc }
+    ]
+    inject: { append: true }
+  }
+
+  rule: pair: close: {
+    alts: [
+      { s: '#CA #CB' b: 1 g: comma }
+    ]
+    inject: {}
+  }
+
+  rule: elem: close: {
+    alts: [
+      { s: '#CA #CS' b: 1 g: comma }
+    ]
+    inject: {}
+  }
+}
