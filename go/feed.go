@@ -1234,16 +1234,17 @@ func Feed(j *jsonic.Jsonic, options map[string]any) error {
 		format = "atom"
 	}
 
+	// The xml rule's bc fires once per close, including extra times when
+	// `r: xml` recurses to consume trailing whitespace. Mirror @xml-bc's
+	// own guard: only run when an element was actually parsed in *this*
+	// iteration (r.Child.Node is set), so the conversion happens exactly
+	// once on the same iteration that @xml-bc copied the element to root.
 	j.Rule("xml", func(rs *jsonic.RuleSpec, _ *jsonic.Parser) {
 		rs.AddBC(func(r *jsonic.Rule, ctx *jsonic.Context) {
-			// The xml rule's bc may run multiple times when there is
-			// trailing whitespace after the root element. Only convert
-			// the first time, when r.Node is still the raw XmlElement
-			// map produced by @xml-bc.
-			if r.Node == nil {
+			if r.Child == nil || r.Child == jsonic.NoRule || r.Child.Node == nil {
 				return
 			}
-			if _, ok := asElement(r.Node); !ok {
+			if r.Node == nil {
 				return
 			}
 			out, err := Convert(r.Node, format)

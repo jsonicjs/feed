@@ -920,11 +920,15 @@ const Feed: Plugin = function Feed(jsonic, options) {
   jsonic.use(Xml)
   const opts = withDefaults(options as FeedOptions | undefined)
 
-  // After @xml-bc copies the parsed XmlElement tree onto ctx.root().node,
-  // transform it into the feed shape selected by `opts.format`. Appending
-  // a second bc action runs it after the XML plugin's own.
+  // The xml rule's bc fires once per close, including extra times when
+  // `r: xml` recurses to consume trailing whitespace. Mirror @xml-bc's
+  // own guard: only run when an element was actually parsed in *this*
+  // iteration (r.child.node is set), so the conversion happens exactly
+  // once on the same iteration that @xml-bc copied the element to root.
   jsonic.rule('xml', (rs) => {
-    rs.bc(true, (_rule, ctx) => {
+    rs.bc(true, (rule: any, ctx: any) => {
+      const child = rule.child
+      if (!child || !child.node) return
       const root = ctx.root()
       if (isElement(root.node)) {
         root.node = convert(root.node, opts)
