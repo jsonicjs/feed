@@ -1,26 +1,27 @@
 {
-  "name": "@jsonic/jsonc",
-  "version": "0.8.0",
-  "description": "This plugin allows the Jsonic JSON parser to support JSONC syntax.",
+  "name": "@jsonic/feed",
+  "version": "0.1.0",
+  "description": "Parses RSS (0.90, 0.91, 0.92, 1.0, 2.0) and Atom (0.3, 1.0) feeds into a typed structure, defaulting to a normalized Atom shape.",
   "author": "Richard Rodger (http://richardrodger.com)",
   "license": "MIT",
-  "main": "dist/jsonc.js",
-  "types": "dist/jsonc.d.ts",
-  "homepage": "https://github.com/jsonicjs/jsonc",
-  "repository": "github:jsonicjs/jsonc",
+  "main": "dist/feed.js",
+  "types": "dist/feed.d.ts",
+  "homepage": "https://github.com/jsonicjs/feed",
+  "repository": "github:jsonicjs/feed",
   "keywords": [
-    "jsonc",
-    "json",
-    "comments",
+    "rss",
+    "atom",
+    "rdf",
+    "feed",
     "parser",
-    "jsonic"
+    "jsonic",
+    "xml"
   ],
   "scripts": {
     "test": "node --enable-source-maps --test \"dist-test/*.test.js\"",
     "test-some": "node --enable-source-maps --test-name-pattern=\"$npm_config_pattern\" --test \"dist-test/*.test.js\"",
-    "embed": "node embed-grammar.js",
     "watch": "tsc --build src test -w",
-    "build": "node embed-grammar.js && tsc --build src test",
+    "build": "tsc --build src test",
     "clean": "rm -rf dist dist-test node_modules yarn.lock package-lock.json",
     "reset": "npm run clean && npm i && npm run build && npm test",
     "repo-tag": "REPO_VERSION=`node -e \"console.log(require('./package').version)\"` && echo TAG: v$REPO_VERSION && git commit -a -m v$REPO_VERSION && git push && git tag v$REPO_VERSION && git push --tags;",
@@ -28,10 +29,13 @@
     "repo-publish-quick": "npm run build && npm run test && npm run repo-tag && npm publish --access public --registry https://registry.npmjs.org "
   },
   "peerDependencies": {
-    "jsonic": ">=2"
+    "jsonic": "^2.28.0",
+    "@jsonic/xml": "^0.1.1"
   },
   "devDependencies": {
+    "@jsonic/xml": "^0.1.1",
     "@types/node": "25.6.0",
+    "jsonic": "^2.28.0",
     "typescript": "6.0.3"
   },
   "files": [

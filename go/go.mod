@@ -1,5 +1,8 @@
-module github.com/jsonicjs/jsonc/go
+module github.com/jsonicjs/feed/go
 
 go 1.24.7
 
-require github.com/jsonicjs/jsonic/go v0.1.22
+require (
+	github.com/jsonicjs/jsonic/go v0.1.22
+	github.com/jsonicjs/xml/go v0.1.1
+)
