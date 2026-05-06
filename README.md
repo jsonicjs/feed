@@ -9,10 +9,10 @@ feeds from any source.
 
 The same parser is available in two languages:
 
-| Language   | Package                                                        | Source                              |
-| ---------- | -------------------------------------------------------------- | ----------------------------------- |
-| TypeScript | [`@jsonic/feed`](https://npmjs.com/package/@jsonic/feed)       | [`src/feed.ts`](src/feed.ts)        |
-| Go         | [`github.com/jsonicjs/feed/go`](https://github.com/jsonicjs/feed/tree/main/go) | [`go/feed.go`](go/feed.go) |
+| Language   | Package                                                        | Source                       | Docs                              |
+| ---------- | -------------------------------------------------------------- | ---------------------------- | --------------------------------- |
+| TypeScript | [`@jsonic/feed`](https://npmjs.com/package/@jsonic/feed)       | [`src/feed.ts`](src/feed.ts) | this file                         |
+| Go         | [`github.com/jsonicjs/feed/go`](https://github.com/jsonicjs/feed/tree/main/go) | [`go/feed.go`](go/feed.go) | [`go/README.md`](go/README.md) |
 
 [![npm version](https://img.shields.io/npm/v/@jsonic/feed.svg)](https://npmjs.com/package/@jsonic/feed)
 [![build](https://github.com/jsonicjs/feed/actions/workflows/build.yml/badge.svg)](https://github.com/jsonicjs/feed/actions/workflows/build.yml)
@@ -21,6 +21,10 @@ The same parser is available in two languages:
 | ![Voxgig](https://www.voxgig.com/res/img/vgt01r.png) | This open source module is sponsored and supported by [Voxgig](https://www.voxgig.com). |
 | ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
 
+
+> **Go users:** the [`go/README.md`](go/README.md) is a Go-only view
+> of these same docs. The rest of this file covers both languages
+> side by side.
 
 This documentation follows the four [Diátaxis](https://diataxis.fr)
 modes:
